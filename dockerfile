@@ -1,23 +1,27 @@
 # Use an official PHP image with Apache
 FROM php:8.2-apache
 
-# Install required system dependencies and PHP extensions
-# These are needed for the SQLite database, cURL (for notifications), and Proxmox integration
+# Install system dependencies, PHP extensions, and the `setcap` utility
 RUN apt-get update && apt-get install -y \
     libsqlite3-dev \
     libcurl4-openssl-dev \
+    iputils-ping \
+    libcap2-bin \
     && docker-php-ext-install pdo_sqlite curl
 
-# Copy the custom entrypoint script into the container
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+# Grant the ping utility the necessary capability to be run by non-root users.
+# This is the key fix for allowing ping to work correctly from the web server.
+RUN setcap cap_net_raw+ep /bin/ping
 
-# Make the entrypoint script executable
+# Copy the entrypoint script and make it executable
+COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set the entrypoint to our custom script.
-# This script will now run every time the container starts.
+# Copy application files
+COPY . /var/www/html/
+
+# Set the entrypoint
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# The default command for the php:apache image is to start Apache.
-# We run this from our entrypoint script, so we can just set a default here.
-CMD ["apache2-foreground"]
+# Expose port 80 for the Apache web server
+EXPOSE 80
