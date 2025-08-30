@@ -35,8 +35,8 @@ This method uses Docker and Docker Compose to run the application in an isolated
 
 1.  **Clone the Repository:**
     ```bash
-    git clone <your-repository-url> /path/to/phpping
-    cd /path/to/phpping
+    git clone https://github.com/danmed/PHPing phpping
+    cd phpping
     ```
 
 2.  **Build and Start the Container:**
