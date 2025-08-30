@@ -6,6 +6,12 @@ services:
     ports:
       - "8080:80"
     volumes:
-      # Mounts the current directory on the host to /var/www/html in the container
+      # Mounts the current directory (for PHP files) to the container
       - .:/var/www/html
+      # Mounts the named volume to the /data directory for the database
+      - famping_data:/data
     restart: unless-stopped
+
+# Defines the named volume that will persist the database
+volumes:
+  famping_data:
