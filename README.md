@@ -41,7 +41,7 @@ This is the easiest and most reliable way to run FamPing.
 2.  **Build and Run:**
     From inside the `FamPing` directory, run the following command. This builds the image and starts the web server and the background checking script.
     ```
-    docker-compose up --build -d
+    docker compose up --build -d
     ```
 
 3.  **Run the Setup Script:**
