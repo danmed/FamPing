@@ -1,15 +1,21 @@
-# Use an official PHP image with Apache for the web server
+# Use an official PHP image with Apache
 FROM php:8.2-apache
 
-# Install system dependencies and the required PHP extensions for FamPing
+# Install required system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     libsqlite3-dev \
     libcurl4-openssl-dev \
     && docker-php-ext-install pdo_sqlite curl
 
-# Set the working directory inside the container
-WORKDIR /var/www/html
+# Copy the entrypoint script and make it executable
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Note: We no longer need to copy files here.
-# The docker-compose.yml file will mount the project directory directly.
-# This is better for development as changes are reflected instantly.
+# Set ownership of the web root (good practice)
+RUN chown -R www-data:www-data /var/www/html
+
+# Set the entrypoint to our custom script
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Expose port 80 for the Apache web server
+EXPOSE 80
