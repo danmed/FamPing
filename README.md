@@ -38,6 +38,7 @@ Installation
 
     git clone <your-repository-url> /path/to/your/folder
 
+
     Run the Setup Script:
     Open your web browser and navigate to http://your-server.com/folder/setup.php. This will create the monitor.db SQLite database file in the same directory.
 
@@ -50,6 +51,7 @@ Installation
     chmod 664 /path/to/your/folder/monitor.db
     sudo chown www-data:www-data /path/to/your/folder/monitor.db
 
+
     (The user/group www-data might be different on your system, e.g., apache, nginx)
 
     Configure the Cron Job:
@@ -59,9 +61,11 @@ Installation
 
     crontab -e
 
+
     Add the following line to run the check every 5 minutes (adjust the schedule and paths as needed):
 
     */5 * * * * /usr/bin/php /path/to/your/folder/check_monitors.php
+
 
 Configuration & Usage
 
