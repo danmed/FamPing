@@ -5,92 +5,98 @@ FamPing is a simple, self-hosted, PHP-based application for monitoring the statu
 ## Key Features
 
 * **Simple Ping Monitoring:** Check the status of any IP address or hostname.
-
 * **Parent-Child Dependencies:** Set relationships between monitors (e.g., a server behind a switch). If the parent goes down, notifications for children are suppressed.
-
-* **Proxmox VE Integration:** Automatically import all VMs and LXC containers from your Proxmox server as child monitors. The script intelligently discovers guest IP addresses.
-
+* **Proxmox VE Integration:** Automatically import all VMs and LXC containers from your Proxmox server as child monitors.
 * **At-a-Glance History:** See the last 30 checks for each monitor directly on the dashboard.
-
-* **Detailed History:** View a detailed log of status changes for each monitor.
-
 * **Flexible Notifications:** Receive alerts via SMTP Email and Discord Webhooks.
+* **Web-Based Configuration:** All settings, including notifications and Proxmox servers, are managed through the GUI.
+* **Lightweight & Portable:** Uses PHP and a simple SQLite database file. Now with Docker support for easy deployment.
 
-* **Web-Based Configuration:** All settings, including notifications and Proxmox servers, are managed through the GUI. No need to edit config files after setup.
+---
 
-* **Lightweight:** Uses PHP and a simple SQLite database file, requiring no complex setup.
+## Docker Installation (Recommended)
 
-## Scrennshots
+This is the easiest way to get FamPing running. It uses Docker and Docker Compose to manage the web server and the background checking script automatically.
 
-<img width="2014" height="1023" alt="image" src="https://github.com/user-attachments/assets/de0d345c-d9b9-4a39-8832-2da2e1e54a54" />
+### Prerequisites
 
+* [Docker](https://www.docker.com/get-started)
+* [Docker Compose](https://docs.docker.com/compose/install/)
 
-## Requirements
+### Instructions
 
-* A web server with PHP (7.2+ recommended).
+1.  **Clone the Repository:**
+    Clone this repository, which includes the `Dockerfile` and `docker-compose.yml` files, to your machine.
+    ```
+    git clone <your-repository-url> famping
+    cd famping
+    ```
 
-* PHP Extensions:
+2.  **Build and Run the Containers:**
+    From inside the `famping` directory, run the following command. This will build the PHP image, create a persistent volume for the database, and start the web and cron services in the background.
+    ```
+    docker-compose up --build -d
+    ```
 
-  * `pdo_sqlite` (for the database)
+3.  **Run the Setup Script:**
+    The first time you start the application, you must run the setup script. Open your web browser and navigate to:
+    **[http://localhost:8080/setup.php](http://localhost:8080/setup.php)**
 
-  * `curl` (for Proxmox integration and Discord notifications)
+4.  **IMPORTANT: Delete Setup File:**
+    After setup is complete, **delete the `setup.php` file** from your project folder for security. The container will see this change automatically.
 
-* Shell access to set up a cron job.
+5.  **Access FamPing:**
+    You can now access your FamPing dashboard at **[http://localhost:8080](http://localhost:8080)**.
 
-## Installation
+The cron job is handled by a separate service in `docker-compose.yml` and will start checking your monitors automatically.
 
-1. **Clone the Repository:**
-   Clone this repository to a folder on your web server.
+---
 
-   ```
-   git clone <your-repository-url> /path/to/your/folder
-   
-   ```
+## Manual Installation
 
-2. **Run the Setup Script:**
-   Open your web browser and navigate to `http://your-server.com/folder/setup.php`. This will create the `monitor.db` SQLite database file in the same directory.
+Use these instructions if you want to install FamPing directly on a web server without using Docker.
 
-3. **IMPORTANT: Delete Setup File:**
-   After you see the "Setup Complete!" message, **you must delete the `setup.php` file** from your server for security.
+### Requirements
 
-4. **Set File Permissions:**
-   Ensure your web server has permission to write to the `monitor.db` file.
+* A web server (Apache, Nginx, etc.) with PHP (7.2+ recommended).
+* PHP Extensions: `pdo_sqlite` and `curl`.
+* Shell access to configure a cron job.
 
-   ```
-   chmod 664 /path/to/your/folder/monitor.db
-   sudo chown www-data:www-data /path/to/your/folder/monitor.db
-   
-   ```
+### Instructions
 
-   *(The user/group `www-data` might be different on your system, e.g., `apache`, `nginx`)*
+1.  **Deploy Files:**
+    Clone or copy the application files to a folder on your web server.
 
-5. **Configure the Cron Job:**
-   The `check_monitors.php` script needs to be run on a regular schedule to perform the pings. Set up a cron job to run every few minutes.
+2.  **Run the Setup Script:**
+    Open your browser and navigate to `http://your-server.com/folder/setup.php` to create the database.
 
-   Open your crontab editor:
+3.  **Delete Setup File:**
+    After setup is complete, **delete the `setup.php` file** for security.
 
-   ```
-   crontab -e
-   
-   ```
+4.  **Set File Permissions:**
+    Ensure your web server can write to the `monitor.db` file.
+    ```
+    chmod 664 /path/to/your/folder/monitor.db
+    sudo chown www-data:www-data /path/to/your/folder/monitor.db
+    ```
+    *(The user `www-data` might be different on your system, e.g., `apache`)*
 
-   Add the following line to run the check every 5 minutes (adjust the schedule and paths as needed):
+5.  **Configure the Cron Job:**
+    Open your crontab editor (`crontab -e`) and add a line to run the check script every few minutes.
+    ```
+    */5 * * * * /usr/bin/php /path/to/your/folder/check_monitors.php
+    ```
 
-   ```
-   */5 * * * * /usr/bin/php /path/to/your/folder/check_monitors.php
-   
-   ```
+---
 
 ## Configuration & Usage
 
-Once installed, all configuration is done through the web interface at `http://your-server.com/folder/`.
+Once installed, all configuration is done through the web interface.
 
-* **Monitors:** Use the "Add Monitor" tab to create new monitors. You can assign parents to create dependencies.
-
-* **Settings:** Go to the "Settings" tab to configure your SMTP email and Discord webhook notification channels.
-
-* **Proxmox:** Use the "Proxmox" tab to add your server credentials. Once added, you can click "Sync" to automatically import all your VMs and LXCs as child monitors.
+* **Monitors:** Use the "Add Monitor" tab to create new monitors.
+* **Settings:** Configure your SMTP and Discord notification channels.
+* **Proxmox:** Add your server credentials and sync VMs/LXCs automatically.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details
+This project is licensed under the MIT License.
