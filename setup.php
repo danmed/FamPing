@@ -7,8 +7,8 @@ Description: Run this file ONCE to create the database and tables.
 */
 
 try {
-    // Use __DIR__ to create an absolute path to the database
-    $db_path = __DIR__ . '/monitor.db';
+    // MODIFIED: The database is now in the /data volume inside the container.
+    $db_path = '/data/monitor.db';
     $db = new PDO('sqlite:' . $db_path);
 
     // Set errormode to exceptions
@@ -52,7 +52,7 @@ try {
     $db->exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('smtp_pass', '')");
     $db->exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('smtp_encryption', 'tls')");
 
-    // Create Proxmox servers table
+    // --- Create Proxmox servers table ---
     $db->exec("CREATE TABLE IF NOT EXISTS proxmox_servers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -67,8 +67,8 @@ try {
 
 
     echo "<h1>Setup Complete!</h1>";
-    echo "<p>Database 'monitor.db' and its tables have been created/updated successfully.</p>";
-    echo "<p>You can now navigate to <a href='index.php'>index.php</a> to use the application.</p>";
+    echo "<p>Database 'monitor.db' has been created successfully in the Docker volume.</p>";
+    echo "<p>You can now navigate to the <a href='index.php'>dashboard</a> to use the application.</p>";
     echo "<p><strong>IMPORTANT: For security, you should delete this 'setup.php' file now.</strong></p>";
 
 } catch(PDOException $e) {
@@ -77,3 +77,4 @@ try {
     echo "<p>Error: " . $e->getMessage() . "</p>";
 }
 ?>
+
