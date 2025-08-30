@@ -448,7 +448,7 @@ function renderMonitors(array $monitors, array $history_data) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FamPing Dashboard</title>
+    <title>PHPing Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>body { font-family: 'Inter', sans-serif; } [x-cloak] { display: none; }</style>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
@@ -486,7 +486,7 @@ function renderMonitors(array $monitors, array $history_data) {
 <body class="bg-gray-50 text-gray-800">
 <div class="container mx-auto p-4 md:p-8">
     <header class="mb-8">
-        <h1 class="text-4xl font-bold text-gray-900">FamPing</h1>
+        <h1 class="text-4xl font-bold text-gray-900">PHPing</h1>
         <p class="text-gray-600 mt-1">A simple status page for your hosts and services.</p>
     </header>
 
@@ -704,7 +704,7 @@ function renderMonitors(array $monitors, array $history_data) {
         </div>
     </div>
     <footer class="mt-12 pt-4 border-t text-center text-sm text-gray-500">
-        <p>FamPing - A PHP IP Monitor App</p>
+        <p>PHPing - A PHP IP Monitor App</p>
     </footer>
 </div>
 <script>
