@@ -467,7 +467,7 @@ function renderMonitors(array $monitors, array $history_data) {
     </script>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-<div class="container mx-auto p-4 md:p-8">
+<div class="container mx-auto p-4 md:p-8" x-data="appState()" x-init="init()">
     <header class="mb-8 flex justify-between items-center">
         <div>
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white">PHPing</h1>
@@ -491,7 +491,7 @@ function renderMonitors(array $monitors, array $history_data) {
     <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="lg:col-span-2 space-y-4" x-data="monitorState()" x-init="init()">
+        <div class="lg:col-span-2 space-y-4">
             <h2 class="text-2xl font-semibold border-b pb-2 mb-4 dark:border-gray-700">Monitors</h2>
             <?php if (empty($monitors_tree) && !$error_message): ?>
                 <p class="text-gray-500 dark:text-gray-400">No monitors configured. Add one using the form.</p>
