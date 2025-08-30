@@ -1,17 +1,14 @@
 #!/bin/sh
 
-# Set the path to the database file
-DB_FILE="/var/www/html/monitor.db"
-
-# Fix permissions on the database file if it exists.
-# This runs every time the container starts, ensuring the web server can always write to it.
-if [ -f "$DB_FILE" ]; then
-    chown www-data:www-data "$DB_FILE"
-fi
+# This directory is our persistent data volume.
+# We ensure it exists and is owned by the web server user.
+mkdir -p /data
+chown -R www-data:www-data /data
 
 # Start the background checking script in a loop.
-# The output is redirected to Docker logs.
 (while true; do
+    # Wait a moment for the server to be ready before the first check
+    sleep 10
     php /var/www/html/check_monitors.php
     sleep 300
 done) &
