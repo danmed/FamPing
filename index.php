@@ -234,7 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$_POST['id']]);
             $success_message = "Monitor deleted successfully.";
         }
-        // --- NEW: Handle Manual Check ---
+        // --- Handle Manual Check ---
         if (isset($_POST['check_now'])) {
             $monitor_id = $_POST['id'];
             $stmt = $db->prepare("SELECT * FROM monitors WHERE id = ?");
@@ -405,13 +405,13 @@ function renderMonitors(array $monitors, array $history_data) {
             echo "<div class='w-6'></div>";
         }
         
-        echo "<span class='w-4 h-4 rounded-full {$status_color}'></span>";
+        echo "<span id='monitor-status-{$monitor_id}' class='w-4 h-4 rounded-full {$status_color}'></span>"; // Added ID for JS targeting
         echo "<div><p class='font-bold text-lg'>".htmlspecialchars($monitor['name'])."</p><p class='text-sm text-gray-500'>".htmlspecialchars($monitor['ip_address'])."</p></div>";
         echo "</div>";
 
         // Right side: last check and actions
         echo "<div class='text-right'>";
-        echo "<p class='text-sm text-gray-600'>Last check: " . ($monitor['last_check'] ? date('Y-m-d H:i:s', strtotime($monitor['last_check'])) : 'N/A') . "</p>";
+        echo "<p id='monitor-last-check-{$monitor_id}' class='text-sm text-gray-600'>Last check: " . ($monitor['last_check'] ? date('Y-m-d H:i:s', strtotime($monitor['last_check'])) : 'N/A') . "</p>"; // Added ID for JS targeting
         echo "<div class='flex items-center space-x-3 mt-2'>";
         echo "<form method='POST' class='inline'><input type='hidden' name='id' value='{$monitor['id']}'><button type='submit' name='check_now' class='text-sm text-indigo-600 hover:underline'>Check</button></form>";
         echo "<a href='history.php?id={$monitor['id']}' class='text-sm text-green-600 hover:underline'>History</a>";
@@ -423,13 +423,13 @@ function renderMonitors(array $monitors, array $history_data) {
 
         // History bar
         $monitor_history = $history_data[$monitor['id']] ?? [];
+        echo "<div id='monitor-history-{$monitor_id}' class='mt-3 flex items-center space-x-px' title='Last 30 checks. Most recent is on the right.'>"; // Added ID for JS targeting
         if (!empty($monitor_history)) {
             $display_history = array_reverse($monitor_history);
-            echo "<div class='mt-3 flex items-center space-x-px' title='Last 30 checks. Most recent is on the right.'>";
             for ($i = 0; $i < (30 - count($display_history)); $i++) echo "<div class='w-2 h-5 rounded-sm bg-gray-200'></div>";
             foreach ($display_history as $status) echo "<div class='w-2 h-5 rounded-sm ".($status === 'up' ? 'bg-green-500' : 'bg-red-500')."'></div>";
-            echo "</div>";
         }
+        echo "</div>";
         echo "</div>"; // Close monitor card div
 
         // Collapsible children container
@@ -707,5 +707,70 @@ function renderMonitors(array $monitors, array $history_data) {
         <p>FamPing - A PHP IP Monitor App</p>
     </footer>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const updateInterval = 30000; // 30 seconds
+
+        const updateMonitorStatuses = () => {
+            fetch('api.php')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(json => {
+                    if (json.success && json.data) {
+                        const monitorData = json.data;
+                        for (const monitorId in monitorData) {
+                            const data = monitorData[monitorId];
+                            
+                            // Update Status Dot
+                            const statusEl = document.getElementById(`monitor-status-${monitorId}`);
+                            if (statusEl) {
+                                statusEl.className = 'w-4 h-4 rounded-full '; // Reset classes
+                                if (data.status === 'up') {
+                                    statusEl.classList.add('bg-green-500');
+                                } else if (data.status === 'down') {
+                                    statusEl.classList.add('bg-red-500');
+                                } else {
+                                    statusEl.classList.add('bg-gray-400');
+                                }
+                            }
+
+                            // Update Last Check Time
+                            const lastCheckEl = document.getElementById(`monitor-last-check-${monitorId}`);
+                            if (lastCheckEl) {
+                                lastCheckEl.textContent = 'Last check: ' + data.last_check;
+                            }
+
+                            // Update History Bar
+                            const historyEl = document.getElementById(`monitor-history-${monitorId}`);
+                            if (historyEl) {
+                                let historyHtml = '';
+                                const historyCount = data.history.length;
+                                // Add placeholders
+                                for (let i = 0; i < (30 - historyCount); i++) {
+                                    historyHtml += `<div class='w-2 h-5 rounded-sm bg-gray-200'></div>`;
+                                }
+                                // Add actual history
+                                data.history.forEach(status => {
+                                    const colorClass = status === 'up' ? 'bg-green-500' : 'bg-red-500';
+                                    historyHtml += `<div class='w-2 h-5 rounded-sm ${colorClass}'></div>`;
+                                });
+                                historyEl.innerHTML = historyHtml;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to fetch monitor statuses:', error);
+                });
+        };
+
+        // Run the update function every X seconds
+        setInterval(updateMonitorStatuses, updateInterval);
+    });
+</script>
 </body>
 </html>
