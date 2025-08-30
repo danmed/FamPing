@@ -13,6 +13,10 @@ FamPing is a simple, self-hosted, PHP-based application for monitoring the statu
 * **Lightweight & Portable:** Uses PHP and a simple SQLite database file. Now with Docker support for easy deployment.
 
 ---
+## Screenshots
+
+<img width="1960" height="957" alt="image" src="https://github.com/user-attachments/assets/ee341ff7-229c-4278-875f-35be34846a5e" />
+
 
 ## Docker Installation (Recommended)
 
