@@ -204,4 +204,3 @@ function sendDiscordNotification($monitor, $status, $webhookUrl) {
     curl_close($ch);
 }
 ?>
-
