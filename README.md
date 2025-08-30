@@ -34,12 +34,12 @@ This is the easiest and most reliable way to run FamPing.
 1.  **Clone the Repository:**
     Get the code, which includes the `Dockerfile` and `docker-compose.yml` files.
     ```
-    git clone <your-repository-url> famping
-    cd famping
+    git clone https://github.com/danmed/FamPing/
+    cd FamPing
     ```
 
 2.  **Build and Run:**
-    From inside the `famping` directory, run the following command. This builds the image and starts the web server and the background checking script.
+    From inside the `FamPing` directory, run the following command. This builds the image and starts the web server and the background checking script.
     ```
     docker-compose up --build -d
     ```
