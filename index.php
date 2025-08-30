@@ -234,6 +234,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$_POST['id']]);
             $success_message = "Monitor deleted successfully.";
         }
+        // --- NEW: Handle Manual Check ---
+        if (isset($_POST['check_now'])) {
+            $monitor_id = $_POST['id'];
+            $stmt = $db->prepare("SELECT * FROM monitors WHERE id = ?");
+            $stmt->execute([$monitor_id]);
+            $monitor = $stmt->fetch();
+    
+            if ($monitor) {
+                $is_up = pingHost($monitor['ip_address']);
+                $status_string = $is_up ? 'up' : 'down';
+    
+                // Update monitor status
+                $update_stmt = $db->prepare("UPDATE monitors SET last_status = ?, last_check = datetime('now', 'localtime') WHERE id = ?");
+                $update_stmt->execute([$status_string, $monitor_id]);
+    
+                // Add to history
+                $hist_stmt = $db->prepare("INSERT INTO ping_history (monitor_id, status, check_time) VALUES (?, ?, datetime('now', 'localtime'))");
+                $hist_stmt->execute([$monitor_id, $status_string]);
+    
+                $success_message = "Manual check complete for '".htmlspecialchars($monitor['name'])."'. Status: " . strtoupper($status_string);
+            } else {
+                $error_message = "Could not find monitor to check.";
+            }
+        }
         
         // --- Settings Form ---
         if (isset($_POST['save_settings'])) {
@@ -297,7 +321,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Refresh page after a successful action to show changes
-    if (($success_message || isset($_POST['save_monitor'])) && !$error_message) {
+    if (($success_message || isset($_POST['save_monitor']) || isset($_POST['check_now'])) && !$error_message) {
         header("Location: index.php");
         exit();
     }
@@ -389,6 +413,7 @@ function renderMonitors(array $monitors, array $history_data) {
         echo "<div class='text-right'>";
         echo "<p class='text-sm text-gray-600'>Last check: " . ($monitor['last_check'] ? date('Y-m-d H:i:s', strtotime($monitor['last_check'])) : 'N/A') . "</p>";
         echo "<div class='flex items-center space-x-3 mt-2'>";
+        echo "<form method='POST' class='inline'><input type='hidden' name='id' value='{$monitor['id']}'><button type='submit' name='check_now' class='text-sm text-indigo-600 hover:underline'>Check</button></form>";
         echo "<a href='history.php?id={$monitor['id']}' class='text-sm text-green-600 hover:underline'>History</a>";
         echo "<a href='?edit={$monitor['id']}' class='text-sm text-blue-500 hover:underline'>Edit</a>";
         echo "<form method='POST' onsubmit='return confirm(\"Are you sure?\");'><input type='hidden' name='id' value='{$monitor['id']}'><button type='submit' name='delete_monitor' class='text-sm text-red-500 hover:underline'>Delete</button></form>";
