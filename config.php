@@ -96,16 +96,16 @@ function sendEmailNotification($monitor, $status, $settings) {
     }
 
     $from_email = $user ?: "monitor@" . ($_SERVER['SERVER_NAME'] ?? 'localhost');
-    $from_name = 'FamPing';
-    $subject = "FamPing Status Alert: {$monitor['name']} is {$status}";
+    $from_name = 'PHPing';
+    $subject = "PHPing Status Alert: {$monitor['name']} is {$status}";
     $body = "Hello,\r\n\r\n" .
-            "This is an automated alert from FamPing.\r\n\r\n" .
+            "This is an automated alert from PHPing.\r\n\r\n" .
             "Monitor Details:\r\n" .
             "- Name: {$monitor['name']}\r\n" .
             "- Host: {$monitor['ip_address']}\r\n" .
             "- Status: {$status}\r\n" .
             "- Time: " . date('Y-m-d H:i:s') . "\r\n\r\n" .
-            "Thank you,\r\nFamPing";
+            "Thank you,\r\nPHPing";
 
     // Build headers
     $headers = "From: \"{$from_name}\" <{$from_email}>\r\n";
@@ -181,14 +181,14 @@ function sendDiscordNotification($monitor, $status, $webhookUrl) {
     $color = ($statusUpper === 'UP') ? 3066993 : 15158332; // Green : Red
 
     $embed = [
-        'title' => "FamPing Status: {$monitor['name']} is {$statusUpper}",
+        'title' => "PHPing Status: {$monitor['name']} is {$statusUpper}",
         'description' => "The monitor for `{$monitor['ip_address']}` has changed state.",
         'color' => $color,
         'timestamp' => date('c'),
-        'footer' => ['text' => 'FamPing']
+        'footer' => ['text' => 'PHPing']
     ];
 
-    $payload = json_encode(['username' => 'FamPing Alert', 'embeds' => [$embed]]);
+    $payload = json_encode(['username' => 'PHPing Alert', 'embeds' => [$embed]]);
 
     $ch = curl_init($webhookUrl);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/json'));
@@ -203,4 +203,7 @@ function sendDiscordNotification($monitor, $status, $webhookUrl) {
     }
     curl_close($ch);
 }
-?>
+
+// Best practice: Omit the closing PHP tag in files that contain only PHP code.
+// This prevents accidental whitespace from being sent to the browser.
+
