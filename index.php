@@ -272,8 +272,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $enable_discord = isset($_POST['enable_discord']) ? '1' : '0';
             $webhook_url = $_POST['discord_webhook_url'] ?? '';
 
-            $check_interval = $_POST['check_interval_seconds'] ?? '300';
-
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'enable_email'")->execute([$enable_email]);
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'email_to'")->execute([$email_to]);
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'smtp_host'")->execute([$smtp_host]);
@@ -284,10 +282,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'enable_discord'")->execute([$enable_discord]);
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'discord_webhook_url'")->execute([$webhook_url]);
-
-            $db->prepare("UPDATE settings SET value = ? WHERE key = 'check_interval_seconds'")->execute([$check_interval]);
             
-            $success_message = "Settings saved successfully! Container must be restarted for check interval changes to take effect.";
+            $success_message = "Settings saved successfully!";
             // Re-fetch settings to show updated values
             $settings = $db->query("SELECT key, value FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
         }
@@ -542,15 +538,6 @@ function renderMonitors(array $monitors, array $history_data) {
             <div x-show="tab === 'settings'" x-cloak class="mt-6">
                  <form method="POST" class="space-y-6">
                     <div class="space-y-4">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900">General Settings</h3>
-                         <div>
-                            <label for="check_interval_seconds" class="block text-sm font-medium text-gray-700">Check Interval (seconds)</label>
-                            <input type="number" name="check_interval_seconds" id="check_interval_seconds" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="300" value="<?= htmlspecialchars($settings['check_interval_seconds'] ?? '300') ?>">
-                            <p class="mt-2 text-sm text-gray-500">How often the background worker should check monitors. Requires a container restart to take effect.</p>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="space-y-4">
                         <h3 class="text-lg font-medium leading-6 text-gray-900">Email Notifications</h3>
                         <div class="relative flex items-start">
                             <div class="flex items-center h-5"><input id="enable_email" name="enable_email" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded" <?= ($settings['enable_email'] ?? '0') === '1' ? 'checked' : '' ?>></div>
@@ -692,6 +679,34 @@ function renderMonitors(array $monitors, array $history_data) {
     </footer>
 </div>
 <script>
+    function monitorState() {
+        return {
+            expandedMonitors: [],
+            init() {
+                try {
+                    const stored = localStorage.getItem('expandedMonitors');
+                    this.expandedMonitors = stored ? JSON.parse(stored) : [];
+                } catch (e) {
+                    console.error('Could not parse expanded monitors from localStorage', e);
+                    this.expandedMonitors = [];
+                    localStorage.removeItem('expandedMonitors');
+                }
+            },
+            isExpanded(monitorId) {
+                return this.expandedMonitors.includes(monitorId);
+            },
+            toggle(monitorId) {
+                const index = this.expandedMonitors.indexOf(monitorId);
+                if (index === -1) {
+                    this.expandedMonitors.push(monitorId);
+                } else {
+                    this.expandedMonitors.splice(index, 1);
+                }
+                localStorage.setItem('expandedMonitors', JSON.stringify(this.expandedMonitors));
+            }
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         // --- AJAX Auto-Refresh ---
         const updateInterval = 30000; // 30 seconds
