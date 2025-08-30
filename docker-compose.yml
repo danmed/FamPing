@@ -1,28 +1,11 @@
 version: '3.8'
 
 services:
-  # This service runs the Apache web server and the FamPing dashboard
-  web:
+  famping:
     build: .
     ports:
-      # Map port 8080 on your local machine to port 80 in the container
       - "8080:80"
     volumes:
-      # Mount the current project directory from your host into the container's web root
-      # This ensures the container always has the latest version of your code.
+      # Mounts the current directory on the host to /var/www/html in the container
       - .:/var/www/html
-    restart: unless-stopped
-
-  # This service runs the background script to check monitors
-  cron:
-    build: .
-    volumes:
-      # Also mount the project directory here so it can access check_monitors.php and the database
-      - .:/var/www/html
-    # This command creates a simple loop that runs the check script every 5 minutes (300 seconds)
-    command: >
-      sh -c "while true; do \
-        php /var/www/html/check_monitors.php; \
-        sleep 300; \
-      done"
     restart: unless-stopped
