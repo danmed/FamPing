@@ -1,17 +1,17 @@
 # Use an official PHP image with Apache
 FROM php:8.2-apache
 
-# Install system dependencies, PHP extensions, and the `setcap` utility
+# Install system dependencies, PHP extensions, and sudo
 RUN apt-get update && apt-get install -y \
     libsqlite3-dev \
     libcurl4-openssl-dev \
     iputils-ping \
-    libcap2-bin \
+    sudo \
     && docker-php-ext-install pdo_sqlite curl
 
-# Grant the ping utility the necessary capability to be run by non-root users.
-# This is the key fix for allowing ping to work correctly from the web server.
-RUN setcap cap_net_raw+ep /bin/ping
+# Grant the www-data user passwordless sudo access ONLY for the ping command.
+# This is a more robust alternative to setcap.
+RUN echo "www-data ALL=(ALL) NOPASSWD: /bin/ping" > /etc/sudoers.d/ping_access
 
 # Copy the entrypoint script and make it executable
 COPY docker-entrypoint.sh /usr/local/bin/
