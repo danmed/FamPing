@@ -272,6 +272,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $enable_discord = isset($_POST['enable_discord']) ? '1' : '0';
             $webhook_url = $_POST['discord_webhook_url'] ?? '';
 
+            $check_interval = $_POST['check_interval_seconds'] ?? '300';
+
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'enable_email'")->execute([$enable_email]);
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'email_to'")->execute([$email_to]);
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'smtp_host'")->execute([$smtp_host]);
@@ -282,8 +284,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'enable_discord'")->execute([$enable_discord]);
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'discord_webhook_url'")->execute([$webhook_url]);
+
+            $db->prepare("UPDATE settings SET value = ? WHERE key = 'check_interval_seconds'")->execute([$check_interval]);
             
-            $success_message = "Settings saved successfully!";
+            $success_message = "Settings saved successfully! Container must be restarted for check interval changes to take effect.";
             // Re-fetch settings to show updated values
             $settings = $db->query("SELECT key, value FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
         }
@@ -386,7 +390,7 @@ function renderMonitors(array $monitors, array $history_data) {
         $monitor_id = $monitor['id'];
 
         // Main monitor container
-        echo "<div x-data='{ expanded: false }'>";
+        echo "<div>"; 
         
         // Main monitor card
         echo "<div class='p-4 border rounded-lg shadow-sm bg-white'>";
@@ -397,8 +401,8 @@ function renderMonitors(array $monitors, array $history_data) {
         
         // Add collapse button with SVG arrow if it has children
         if ($has_children) {
-            echo "<button @click='expanded = !expanded' class='flex items-center justify-center w-6 h-6 rounded-md hover:bg-gray-100 focus:outline-none' title='Toggle children'>";
-            echo "<svg class='w-4 h-4 text-gray-500 transition-transform duration-200' :class='{ \"rotate-90\": expanded }' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7' /></svg>";
+            echo "<button @click='toggle({$monitor_id})' class='flex items-center justify-center w-6 h-6 rounded-md hover:bg-gray-100 focus:outline-none' title='Toggle children'>";
+            echo "<svg class='w-4 h-4 text-gray-500 transition-transform duration-200' :class='{ \"rotate-90\": isExpanded({$monitor_id}) }' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7' /></svg>";
             echo "</button>";
         } else {
             // Add a spacer for alignment if it has no children
@@ -434,7 +438,7 @@ function renderMonitors(array $monitors, array $history_data) {
 
         // Collapsible children container
         if ($has_children) {
-            echo "<div x-show='expanded' x-transition x-cloak class='ml-8 mt-2 space-y-2 border-l-2 pl-4'>";
+            echo "<div x-show='isExpanded({$monitor_id})' x-transition x-cloak class='ml-8 mt-2 space-y-2 border-l-2 pl-4'>";
             renderMonitors($monitor['children'], $history_data);
             echo "</div>";
         }
@@ -444,7 +448,7 @@ function renderMonitors(array $monitors, array $history_data) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -473,7 +477,7 @@ function renderMonitors(array $monitors, array $history_data) {
     <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="lg:col-span-2 space-y-4">
+        <div class="lg:col-span-2 space-y-4" x-data="monitorState()" x-init="init()">
             <h2 class="text-2xl font-semibold border-b pb-2 mb-4">Monitors</h2>
             <?php if (empty($monitors_tree) && !$error_message): ?>
                 <p class="text-gray-500">No monitors configured. Add one using the form.</p>
@@ -537,6 +541,15 @@ function renderMonitors(array $monitors, array $history_data) {
             <!-- Settings Form -->
             <div x-show="tab === 'settings'" x-cloak class="mt-6">
                  <form method="POST" class="space-y-6">
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">General Settings</h3>
+                         <div>
+                            <label for="check_interval_seconds" class="block text-sm font-medium text-gray-700">Check Interval (seconds)</label>
+                            <input type="number" name="check_interval_seconds" id="check_interval_seconds" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="300" value="<?= htmlspecialchars($settings['check_interval_seconds'] ?? '300') ?>">
+                            <p class="mt-2 text-sm text-gray-500">How often the background worker should check monitors. Requires a container restart to take effect.</p>
+                        </div>
+                    </div>
+                    <hr>
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium leading-6 text-gray-900">Email Notifications</h3>
                         <div class="relative flex items-start">
