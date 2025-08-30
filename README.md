@@ -20,6 +20,11 @@ FamPing is a simple, self-hosted, PHP-based application for monitoring the statu
 
 * **Lightweight:** Uses PHP and a simple SQLite database file, requiring no complex setup.
 
+## Scrennshots
+
+<img width="2014" height="1023" alt="image" src="https://github.com/user-attachments/assets/de0d345c-d9b9-4a39-8832-2da2e1e54a54" />
+
+
 ## Requirements
 
 * A web server with PHP (7.2+ recommended).
