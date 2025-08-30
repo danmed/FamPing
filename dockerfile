@@ -1,16 +1,16 @@
 # Use an official PHP image with Apache
 FROM php:8.2-apache
 
-# Install system dependencies, PHP extensions, and sudo
+# Install system dependencies, PHP extensions, sudo, and sqlite3 client
 RUN apt-get update && apt-get install -y \
     libsqlite3-dev \
     libcurl4-openssl-dev \
     iputils-ping \
     sudo \
+    sqlite3 \
     && docker-php-ext-install pdo_sqlite curl
 
 # Grant the www-data user passwordless sudo access ONLY for the ping command.
-# This is a more robust alternative to setcap.
 RUN echo "www-data ALL=(ALL) NOPASSWD: /bin/ping" > /etc/sudoers.d/ping_access
 
 # Copy the entrypoint script and make it executable
