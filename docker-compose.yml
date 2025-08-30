@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # The main web server for the FamPing dashboard
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - famping_db:/var/www/html
+    restart: unless-stopped
+
+  # A separate container to run the cron job
+  cron:
+    build: .
+    volumes:
+      - famping_db:/var/www/html
+    # This command runs an infinite loop that sleeps for 5 minutes, then executes the check script.
+    command: >
+      sh -c "while true; do \
+        php /var/www/html/check_monitors.php; \
+        sleep 300; \
+      done"
+    restart: unless-stopped
+
+# Define the named volume to persist the database
+volumes:
+  famping_db:
