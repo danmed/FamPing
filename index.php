@@ -464,6 +464,34 @@ function renderMonitors(array $monitors, array $history_data) {
         } else {
             document.documentElement.classList.remove('dark');
         }
+        
+        function monitorState() {
+            return {
+                expandedMonitors: [],
+                init() {
+                    try {
+                        const stored = localStorage.getItem('expandedMonitors');
+                        this.expandedMonitors = stored ? JSON.parse(stored) : [];
+                    } catch (e) {
+                        console.error('Could not parse expanded monitors from localStorage', e);
+                        this.expandedMonitors = [];
+                        localStorage.removeItem('expandedMonitors');
+                    }
+                },
+                isExpanded(monitorId) {
+                    return this.expandedMonitors.includes(monitorId);
+                },
+                toggle(monitorId) {
+                    const index = this.expandedMonitors.indexOf(monitorId);
+                    if (index === -1) {
+                        this.expandedMonitors.push(monitorId);
+                    } else {
+                        this.expandedMonitors.splice(index, 1);
+                    }
+                    localStorage.setItem('expandedMonitors', JSON.stringify(this.expandedMonitors));
+                }
+            }
+        }
     </script>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
