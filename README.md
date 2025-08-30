@@ -1,5 +1,3 @@
-/*
-
 # FamPing - A PHP-based Host and Service Monitor
 
 FamPing is a simple, self-hosted, PHP-based application for monitoring the status of IP addresses and hostnames. It features a clean web dashboard, parent-child dependency relationships to prevent notification floods, and powerful integration with Proxmox VE.
@@ -15,14 +13,13 @@ FamPing is a simple, self-hosted, PHP-based application for monitoring the statu
 * **Easy Docker Deployment:** Get up and running in minutes with Docker and Docker Compose.
 
 ---
-
 ## Screenshots
 
 <img width="1960" height="957" alt="image" src="https://github.com/user-attachments/assets/ee341ff7-229c-4278-875f-35be34846a5e" />
 
 ## Docker Installation (Recommended)
 
-This is the easiest and most reliable way to run FamPing.
+This is the easiest and most reliable way to run FamPing. The container automatically handles file permissions and the background checking script.
 
 ### Prerequisites
 
@@ -32,27 +29,28 @@ This is the easiest and most reliable way to run FamPing.
 ### Instructions
 
 1.  **Clone the Repository:**
-    Get the code, which includes the `Dockerfile` and `docker-compose.yml` files.
+    Get the code, which includes the `docker-entrypoint.sh` script.
     ```
-    git clone https://github.com/danmed/FamPing/
-    cd FamPing
+    git clone https://github.com/danmed/FamPing/ famping
+    cd famping
     ```
 
 2.  **Build and Run:**
-    From inside the `FamPing` directory, run the following command. This builds the image and starts the web server and the background checking script.
+    From inside the `famping` directory, run the following command. This builds the image and starts the application.
     ```
-    docker compose up --build -d
+    docker-compose up --build -d
     ```
 
 3.  **Run the Setup Script:**
     The very first time you start the app, you must run the setup script. Open your browser to:
     **[http://localhost:8080/setup.php](http://localhost:8080/setup.php)**
+    This will create the `monitor.db` file in your project folder with the correct permissions.
 
 4.  **IMPORTANT: Delete Setup File:**
     After setup is complete, **delete the `setup.php` file** from your project folder for security.
 
 5.  **Access FamPing:**
-    You can now access your FamPing dashboard at **[http://localhost:8080](http://localhost:8080)**. The database file (`monitor.db`) will be created and stored directly in your project folder.
+    You can now access your FamPing dashboard at **[http://localhost:8080](http://localhost:8080)**.
 
 ---
 
@@ -87,5 +85,3 @@ Once installed, all configuration is done through the web interface.
 ## License
 
 This project is licensed under the MIT License.
-
-*/
