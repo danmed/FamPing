@@ -271,8 +271,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $enable_discord = isset($_POST['enable_discord']) ? '1' : '0';
             $webhook_url = $_POST['discord_webhook_url'] ?? '';
-            
-            $check_interval = $_POST['check_interval_seconds'] ?? '300';
 
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'enable_email'")->execute([$enable_email]);
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'email_to'")->execute([$email_to]);
@@ -284,10 +282,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'enable_discord'")->execute([$enable_discord]);
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'discord_webhook_url'")->execute([$webhook_url]);
-
-            $db->prepare("UPDATE settings SET value = ? WHERE key = 'check_interval_seconds'")->execute([$check_interval]);
             
-            $success_message = "Settings saved successfully! Container must be restarted for check interval changes to take effect.";
+            $success_message = "Settings saved successfully!";
             // Re-fetch settings to show updated values
             $settings = $db->query("SELECT key, value FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
         }
@@ -390,10 +386,10 @@ function renderMonitors(array $monitors, array $history_data) {
         $monitor_id = $monitor['id'];
 
         // Main monitor container
-        echo "<div>"; 
+        echo "<div x-data='{ expanded: false }'>"; 
         
         // Main monitor card
-        echo "<div class='p-4 border rounded-lg shadow-sm bg-white dark:bg-gray-800 dark:border-gray-700'>";
+        echo "<div class='p-4 border rounded-lg shadow-sm bg-white'>";
         echo "<div class='flex flex-wrap items-center justify-between gap-y-2'>";
         
         // Left side: status, name, ip
@@ -401,8 +397,8 @@ function renderMonitors(array $monitors, array $history_data) {
         
         // Add collapse button with SVG arrow if it has children
         if ($has_children) {
-            echo "<button @click='toggle({$monitor_id})' class='flex items-center justify-center w-6 h-6 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none' title='Toggle children'>";
-            echo "<svg class='w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200' :class='{ \"rotate-90\": isExpanded({$monitor_id}) }' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7' /></svg>";
+            echo "<button @click='expanded = !expanded' class='flex items-center justify-center w-6 h-6 rounded-md hover:bg-gray-100 focus:outline-none' title='Toggle children'>";
+            echo "<svg class='w-4 h-4 text-gray-500 transition-transform duration-200' :class='{ \"rotate-90\": expanded }' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7' /></svg>";
             echo "</button>";
         } else {
             // Add a spacer for alignment if it has no children
@@ -410,17 +406,17 @@ function renderMonitors(array $monitors, array $history_data) {
         }
         
         echo "<span id='monitor-status-{$monitor_id}' class='w-4 h-4 rounded-full {$status_color}'></span>"; // Added ID for JS targeting
-        echo "<div><p class='font-bold text-lg'>".htmlspecialchars($monitor['name'])."</p><p class='text-sm text-gray-500 dark:text-gray-400'>".htmlspecialchars($monitor['ip_address'])."</p></div>";
+        echo "<div><p class='font-bold text-lg'>".htmlspecialchars($monitor['name'])."</p><p class='text-sm text-gray-500'>".htmlspecialchars($monitor['ip_address'])."</p></div>";
         echo "</div>";
 
         // Right side: last check and actions
         echo "<div class='text-right'>";
-        echo "<p id='monitor-last-check-{$monitor_id}' class='text-sm text-gray-600 dark:text-gray-400'>Last check: " . ($monitor['last_check'] ? date('Y-m-d H:i:s', strtotime($monitor['last_check'])) : 'N/A') . "</p>"; // Added ID for JS targeting
+        echo "<p id='monitor-last-check-{$monitor_id}' class='text-sm text-gray-600'>Last check: " . ($monitor['last_check'] ? date('Y-m-d H:i:s', strtotime($monitor['last_check'])) : 'N/A') . "</p>"; // Added ID for JS targeting
         echo "<div class='flex items-center space-x-3 mt-2'>";
-        echo "<form method='POST' class='inline'><input type='hidden' name='id' value='{$monitor['id']}'><button type='submit' name='check_now' class='text-sm text-indigo-600 dark:text-indigo-400 hover:underline'>Check</button></form>";
-        echo "<a href='history.php?id={$monitor['id']}' class='text-sm text-green-600 dark:text-green-400 hover:underline'>History</a>";
-        echo "<a href='?edit={$monitor['id']}' class='text-sm text-blue-500 dark:text-blue-400 hover:underline'>Edit</a>";
-        echo "<form method='POST' onsubmit='return confirm(\"Are you sure?\");'><input type='hidden' name='id' value='{$monitor['id']}'><button type='submit' name='delete_monitor' class='text-sm text-red-500 dark:text-red-400 hover:underline'>Delete</button></form>";
+        echo "<form method='POST' class='inline'><input type='hidden' name='id' value='{$monitor['id']}'><button type='submit' name='check_now' class='text-sm text-indigo-600 hover:underline'>Check</button></form>";
+        echo "<a href='history.php?id={$monitor['id']}' class='text-sm text-green-600 hover:underline'>History</a>";
+        echo "<a href='?edit={$monitor['id']}' class='text-sm text-blue-500 hover:underline'>Edit</a>";
+        echo "<form method='POST' onsubmit='return confirm(\"Are you sure?\");'><input type='hidden' name='id' value='{$monitor['id']}'><button type='submit' name='delete_monitor' class='text-sm text-red-500 hover:underline'>Delete</button></form>";
         echo "</div>";
         echo "</div>";
         echo "</div>";
@@ -430,7 +426,7 @@ function renderMonitors(array $monitors, array $history_data) {
         echo "<div id='monitor-history-{$monitor_id}' class='mt-3 flex items-center space-x-px' title='Last 30 checks. Most recent is on the right.'>"; // Added ID for JS targeting
         if (!empty($monitor_history)) {
             $display_history = array_reverse($monitor_history);
-            for ($i = 0; $i < (30 - count($display_history)); $i++) echo "<div class='w-2 h-5 rounded-sm bg-gray-200 dark:bg-gray-600'></div>";
+            for ($i = 0; $i < (30 - count($display_history)); $i++) echo "<div class='w-2 h-5 rounded-sm bg-gray-200'></div>";
             foreach ($display_history as $status) echo "<div class='w-2 h-5 rounded-sm ".($status === 'up' ? 'bg-green-500' : 'bg-red-500')."'></div>";
         }
         echo "</div>";
@@ -438,7 +434,7 @@ function renderMonitors(array $monitors, array $history_data) {
 
         // Collapsible children container
         if ($has_children) {
-            echo "<div x-show='isExpanded({$monitor_id})' x-transition x-cloak class='ml-8 mt-2 space-y-2 border-l-2 pl-4 dark:border-gray-700'>";
+            echo "<div x-show='expanded' x-transition x-cloak class='ml-8 mt-2 space-y-2 border-l-2 pl-4'>";
             renderMonitors($monitor['children'], $history_data);
             echo "</div>";
         }
@@ -448,7 +444,7 @@ function renderMonitors(array $monitors, array $history_data) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en" class="">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -457,51 +453,13 @@ function renderMonitors(array $monitors, array $history_data) {
     <style>body { font-family: 'Inter', sans-serif; } [x-cloak] { display: none; }</style>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script>
-        // Inline script in head to prevent Flash of Unstyled Content (FOUC) for dark mode
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-
-        // Combined AlpineJS state for the entire page
-        function pageState() {
-            return {
-                tab: '<?= $edit_monitor ? 'monitor' : ($edit_proxmox_server ? 'proxmox' : 'monitor') ?>',
-                expandedMonitors: [],
-                init() {
-                    try {
-                        const stored = localStorage.getItem('expandedMonitors');
-                        this.expandedMonitors = stored ? JSON.parse(stored) : [];
-                    } catch (e) {
-                        console.error('Could not parse expanded monitors from localStorage', e);
-                        this.expandedMonitors = [];
-                        localStorage.removeItem('expandedMonitors');
-                    }
-                },
-                isExpanded(monitorId) {
-                    return this.expandedMonitors.includes(monitorId);
-                },
-                toggle(monitorId) {
-                    const index = this.expandedMonitors.indexOf(monitorId);
-                    if (index === -1) {
-                        this.expandedMonitors.push(monitorId);
-                    } else {
-                        this.expandedMonitors.splice(index, 1);
-                    }
-                    localStorage.setItem('expandedMonitors', JSON.stringify(this.expandedMonitors));
-                }
-            }
-        }
-    </script>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-<div class="container mx-auto p-4 md:p-8" x-data="pageState()" x-init="init()">
+<body class="bg-gray-50 text-gray-800">
+<div class="container mx-auto p-4 md:p-8">
     <header class="mb-8 flex justify-between items-center">
         <div>
-            <h1 class="text-4xl font-bold text-gray-900 dark:text-white">PHPing</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-1">A simple status page for your hosts and services.</p>
+            <h1 class="text-4xl font-bold text-gray-900">PHPing</h1>
+            <p class="text-gray-600 mt-1">A simple status page for your hosts and services.</p>
         </div>
         <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
             <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
@@ -510,35 +468,35 @@ function renderMonitors(array $monitors, array $history_data) {
     </header>
 
     <?php if ($error_message): ?>
-    <div class="bg-red-100 border-red-400 text-red-700 dark:bg-red-900 dark:text-red-300 dark:border-red-800 px-4 py-3 rounded-lg relative mb-6" role="alert">
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
         <strong class="font-bold">Application Error!</strong> <span class="block sm:inline"><?= $error_message ?></span>
     </div>
     <?php endif; ?>
     <?php if ($success_message): ?>
-    <div class="bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:text-green-300 dark:border-green-800 px-4 py-3 rounded-lg relative mb-6" role="alert">
+    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
         <strong class="font-bold">Success!</strong> <span class="block sm:inline"><?= $success_message ?></span>
     </div>
     <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="lg:col-span-2 space-y-4">
-            <h2 class="text-2xl font-semibold border-b pb-2 mb-4 dark:border-gray-700">Monitors</h2>
+        <div class="lg:col-span-2 space-y-4" x-data="monitorState()" x-init="init()">
+            <h2 class="text-2xl font-semibold border-b pb-2 mb-4">Monitors</h2>
             <?php if (empty($monitors_tree) && !$error_message): ?>
-                <p class="text-gray-500 dark:text-gray-400">No monitors configured. Add one using the form.</p>
+                <p class="text-gray-500">No monitors configured. Add one using the form.</p>
             <?php else: ?>
                 <?php renderMonitors($monitors_tree, $history_by_monitor); ?>
             <?php endif; ?>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-md dark:bg-gray-800">
-            <div class="border-b border-gray-200 dark:border-gray-700">
+        <div x-data="{ tab: '<?= $edit_monitor ? 'monitor' : ($edit_proxmox_server ? 'proxmox' : 'monitor') ?>' }" class="bg-white p-6 rounded-lg shadow-md">
+            <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                    <button @click="tab = 'monitor'" :class="{ 'border-indigo-500 text-indigo-600 dark:text-indigo-400': tab === 'monitor', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-500': tab !== 'monitor' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    <button @click="tab = 'monitor'" :class="{ 'border-indigo-500 text-indigo-600': tab === 'monitor', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'monitor' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         <?= $edit_monitor ? 'Edit Monitor' : 'Add Monitor' ?>
                     </button>
-                    <button @click="tab = 'settings'" :class="{ 'border-indigo-500 text-indigo-600 dark:text-indigo-400': tab === 'settings', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-500': tab !== 'settings' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    <button @click="tab = 'settings'" :class="{ 'border-indigo-500 text-indigo-600': tab === 'settings', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'settings' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Settings
                     </button>
-                    <button @click="tab = 'proxmox'" :class="{ 'border-indigo-500 text-indigo-600 dark:text-indigo-400': tab === 'proxmox', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-500': tab !== 'proxmox' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    <button @click="tab = 'proxmox'" :class="{ 'border-indigo-500 text-indigo-600': tab === 'proxmox', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'proxmox' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Proxmox
                     </button>
                 </nav>
@@ -546,20 +504,20 @@ function renderMonitors(array $monitors, array $history_data) {
 
             <!-- Monitor Form -->
             <div x-show="tab === 'monitor'" x-cloak class="mt-6">
-                <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white"><?= $edit_monitor ? 'Edit Monitor' : 'Add New Monitor' ?></h3>
+                <h3 class="text-lg font-medium leading-6 text-gray-900"><?= $edit_monitor ? 'Edit Monitor' : 'Add New Monitor' ?></h3>
                 <form method="POST" class="space-y-4 mt-4">
                     <input type="hidden" name="id" value="<?= $edit_monitor['id'] ?? '' ?>">
                     <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Monitor Name</label>
-                        <input type="text" id="name" name="name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="e.g., Main Web Server" value="<?= htmlspecialchars($edit_monitor['name'] ?? '') ?>">
+                        <label for="name" class="block text-sm font-medium text-gray-700">Monitor Name</label>
+                        <input type="text" id="name" name="name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., Main Web Server" value="<?= htmlspecialchars($edit_monitor['name'] ?? '') ?>">
                     </div>
                     <div>
-                        <label for="ip_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">IP Address or Hostname</label>
-                        <input type="text" id="ip_address" name="ip_address" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="e.g., 8.8.8.8" value="<?= htmlspecialchars($edit_monitor['ip_address'] ?? '') ?>">
+                        <label for="ip_address" class="block text-sm font-medium text-gray-700">IP Address or Hostname</label>
+                        <input type="text" id="ip_address" name="ip_address" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., 8.8.8.8" value="<?= htmlspecialchars($edit_monitor['ip_address'] ?? '') ?>">
                     </div>
                     <div>
-                        <label for="parent_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Parent Monitor (Optional)</label>
-                        <select id="parent_id" name="parent_id" class="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md dark:bg-gray-700 dark:border-gray-600">
+                        <label for="parent_id" class="block text-sm font-medium text-gray-700">Parent Monitor (Optional)</label>
+                        <select id="parent_id" name="parent_id" class="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
                             <option value="">None</option>
                             <?php
                             $current_id = $edit_monitor['id'] ?? 0;
@@ -576,7 +534,7 @@ function renderMonitors(array $monitors, array $history_data) {
                             <?= $edit_monitor ? 'Update Monitor' : 'Save Monitor' ?>
                         </button>
                         <?php if ($edit_monitor): ?>
-                        <a href="index.php" class="w-full text-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium bg-white hover:bg-gray-50 dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-500">Cancel</a>
+                        <a href="index.php" class="w-full text-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</a>
                         <?php endif; ?>
                     </div>
                 </form>
@@ -586,47 +544,47 @@ function renderMonitors(array $monitors, array $history_data) {
             <div x-show="tab === 'settings'" x-cloak class="mt-6">
                  <form method="POST" class="space-y-6">
                     <div class="space-y-4">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">General Settings</h3>
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">General Settings</h3>
                          <div>
-                            <label for="check_interval_seconds" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Check Interval (seconds)</label>
-                            <input type="number" name="check_interval_seconds" id="check_interval_seconds" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="300" value="<?= htmlspecialchars($settings['check_interval_seconds'] ?? '300') ?>">
-                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">How often the background worker should check monitors. Requires a container restart to take effect.</p>
+                            <label for="check_interval_seconds" class="block text-sm font-medium text-gray-700">Check Interval (seconds)</label>
+                            <input type="number" name="check_interval_seconds" id="check_interval_seconds" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="300" value="<?= htmlspecialchars($settings['check_interval_seconds'] ?? '300') ?>">
+                            <p class="mt-2 text-sm text-gray-500">How often the background worker should check monitors. Requires a container restart to take effect.</p>
                         </div>
                     </div>
-                    <hr class="dark:border-gray-600">
+                    <hr>
                     <div class="space-y-4">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">Email Notifications</h3>
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">Email Notifications</h3>
                         <div class="relative flex items-start">
-                            <div class="flex items-center h-5"><input id="enable_email" name="enable_email" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600" <?= ($settings['enable_email'] ?? '0') === '1' ? 'checked' : '' ?>></div>
-                            <div class="ml-3 text-sm"><label for="enable_email" class="font-medium text-gray-700 dark:text-gray-300">Enable Email Notifications</label></div>
+                            <div class="flex items-center h-5"><input id="enable_email" name="enable_email" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded" <?= ($settings['enable_email'] ?? '0') === '1' ? 'checked' : '' ?>></div>
+                            <div class="ml-3 text-sm"><label for="enable_email" class="font-medium text-gray-700">Enable Email Notifications</label></div>
                         </div>
                         <div>
-                            <label for="email_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Recipient Email</label>
-                            <input type="email" name="email_to" id="email_to" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="alerts@example.com" value="<?= htmlspecialchars($settings['email_to'] ?? '') ?>">
+                            <label for="email_to" class="block text-sm font-medium text-gray-700">Recipient Email</label>
+                            <input type="email" name="email_to" id="email_to" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="alerts@example.com" value="<?= htmlspecialchars($settings['email_to'] ?? '') ?>">
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="smtp_host" class="block text-sm font-medium text-gray-700 dark:text-gray-300">SMTP Host</label>
-                                <input type="text" name="smtp_host" id="smtp_host" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="smtp.example.com" value="<?= htmlspecialchars($settings['smtp_host'] ?? '') ?>">
+                                <label for="smtp_host" class="block text-sm font-medium text-gray-700">SMTP Host</label>
+                                <input type="text" name="smtp_host" id="smtp_host" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="smtp.example.com" value="<?= htmlspecialchars($settings['smtp_host'] ?? '') ?>">
                             </div>
                             <div>
-                                <label for="smtp_port" class="block text-sm font-medium text-gray-700 dark:text-gray-300">SMTP Port</label>
-                                <input type="number" name="smtp_port" id="smtp_port" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="587" value="<?= htmlspecialchars($settings['smtp_port'] ?? '587') ?>">
+                                <label for="smtp_port" class="block text-sm font-medium text-gray-700">SMTP Port</label>
+                                <input type="number" name="smtp_port" id="smtp_port" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="587" value="<?= htmlspecialchars($settings['smtp_port'] ?? '587') ?>">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="smtp_user" class="block text-sm font-medium text-gray-700 dark:text-gray-300">SMTP Username</label>
-                                <input type="text" name="smtp_user" id="smtp_user" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="user@example.com" value="<?= htmlspecialchars($settings['smtp_user'] ?? '') ?>">
+                                <label for="smtp_user" class="block text-sm font-medium text-gray-700">SMTP Username</label>
+                                <input type="text" name="smtp_user" id="smtp_user" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="user@example.com" value="<?= htmlspecialchars($settings['smtp_user'] ?? '') ?>">
                             </div>
                             <div>
-                                <label for="smtp_pass" class="block text-sm font-medium text-gray-700 dark:text-gray-300">SMTP Password</label>
-                                <input type="password" name="smtp_pass" id="smtp_pass" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="••••••••" value="<?= htmlspecialchars($settings['smtp_pass'] ?? '') ?>">
+                                <label for="smtp_pass" class="block text-sm font-medium text-gray-700">SMTP Password</label>
+                                <input type="password" name="smtp_pass" id="smtp_pass" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="••••••••" value="<?= htmlspecialchars($settings['smtp_pass'] ?? '') ?>">
                             </div>
                         </div>
                         <div>
-                            <label for="smtp_encryption" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Encryption</label>
-                            <select id="smtp_encryption" name="smtp_encryption" class="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600">
+                            <label for="smtp_encryption" class="block text-sm font-medium text-gray-700">Encryption</label>
+                            <select id="smtp_encryption" name="smtp_encryption" class="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                                 <option value="none" <?= ($settings['smtp_encryption'] ?? '') === 'none' ? 'selected' : '' ?>>None</option>
                                 <option value="tls" <?= ($settings['smtp_encryption'] ?? 'tls') === 'tls' ? 'selected' : '' ?>>TLS</option>
                                 <option value="ssl" <?= ($settings['smtp_encryption'] ?? '') === 'ssl' ? 'selected' : '' ?>>SSL</option>
@@ -634,17 +592,17 @@ function renderMonitors(array $monitors, array $history_data) {
                         </div>
                     </div>
 
-                    <hr class="dark:border-gray-600">
+                    <hr>
 
                     <div class="space-y-4">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">Discord Notifications</h3>
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">Discord Notifications</h3>
                         <div class="relative flex items-start">
-                             <div class="flex items-center h-5"><input id="enable_discord" name="enable_discord" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600" <?= ($settings['enable_discord'] ?? '0') === '1' ? 'checked' : '' ?>></div>
-                            <div class="ml-3 text-sm"><label for="enable_discord" class="font-medium text-gray-700 dark:text-gray-300">Enable Discord Notifications</label></div>
+                             <div class="flex items-center h-5"><input id="enable_discord" name="enable_discord" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded" <?= ($settings['enable_discord'] ?? '0') === '1' ? 'checked' : '' ?>></div>
+                            <div class="ml-3 text-sm"><label for="enable_discord" class="font-medium text-gray-700">Enable Discord Notifications</label></div>
                         </div>
                         <div>
-                            <label for="discord_webhook_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Discord Webhook URL</label>
-                            <input type="url" name="discord_webhook_url" id="discord_webhook_url" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" placeholder="https://discord.com/api/webhooks/..." value="<?= htmlspecialchars($settings['discord_webhook_url'] ?? '') ?>">
+                            <label for="discord_webhook_url" class="block text-sm font-medium text-gray-700">Discord Webhook URL</label>
+                            <input type="url" name="discord_webhook_url" id="discord_webhook_url" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="https://discord.com/api/webhooks/..." value="<?= htmlspecialchars($settings['discord_webhook_url'] ?? '') ?>">
                         </div>
                     </div>
                     
@@ -658,37 +616,37 @@ function renderMonitors(array $monitors, array $history_data) {
 
             <!-- Proxmox Form & List -->
             <div x-show="tab === 'proxmox'" x-cloak class="mt-6">
-                <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white"><?= $edit_proxmox_server ? 'Edit' : 'Add' ?> Proxmox Server</h3>
+                <h3 class="text-lg font-medium leading-6 text-gray-900"><?= $edit_proxmox_server ? 'Edit' : 'Add' ?> Proxmox Server</h3>
                 <form method="POST" class="space-y-4 mt-4">
                     <input type="hidden" name="proxmox_id" value="<?= $edit_proxmox_server['id'] ?? '' ?>">
                     <div>
-                        <label for="proxmox_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Friendly Name</label>
-                        <input type="text" name="proxmox_name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600" placeholder="e.g., Home Lab PVE" value="<?= htmlspecialchars($edit_proxmox_server['name'] ?? '') ?>">
+                        <label for="proxmox_name" class="block text-sm font-medium text-gray-700">Friendly Name</label>
+                        <input type="text" name="proxmox_name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="e.g., Home Lab PVE" value="<?= htmlspecialchars($edit_proxmox_server['name'] ?? '') ?>">
                     </div>
                     <div class="grid grid-cols-3 gap-4">
                         <div class="col-span-2">
-                            <label for="proxmox_hostname" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Hostname / IP</label>
-                            <input type="text" name="proxmox_hostname" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600" placeholder="pve.example.com" value="<?= htmlspecialchars($edit_proxmox_server['hostname'] ?? '') ?>">
+                            <label for="proxmox_hostname" class="block text-sm font-medium text-gray-700">Hostname / IP</label>
+                            <input type="text" name="proxmox_hostname" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="pve.example.com" value="<?= htmlspecialchars($edit_proxmox_server['hostname'] ?? '') ?>">
                         </div>
                         <div>
-                            <label for="proxmox_port" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Port</label>
-                            <input type="number" name="proxmox_port" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600" value="<?= htmlspecialchars($edit_proxmox_server['port'] ?? '8006') ?>">
+                            <label for="proxmox_port" class="block text-sm font-medium text-gray-700">Port</label>
+                            <input type="number" name="proxmox_port" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="<?= htmlspecialchars($edit_proxmox_server['port'] ?? '8006') ?>">
                         </div>
                     </div>
                     <div>
-                        <label for="proxmox_username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username (e.g. root@pam)</label>
-                        <input type="text" name="proxmox_username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600" placeholder="user@realm" value="<?= htmlspecialchars($edit_proxmox_server['username'] ?? '') ?>">
+                        <label for="proxmox_username" class="block text-sm font-medium text-gray-700">Username (e.g. root@pam)</label>
+                        <input type="text" name="proxmox_username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="user@realm" value="<?= htmlspecialchars($edit_proxmox_server['username'] ?? '') ?>">
                     </div>
                     <div>
-                        <label for="proxmox_api_token" class="block text-sm font-medium text-gray-700 dark:text-gray-300">API Token</label>
-                        <input type="password" name="proxmox_api_token" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600" value="<?= htmlspecialchars($edit_proxmox_server['api_token'] ?? '') ?>">
+                        <label for="proxmox_api_token" class="block text-sm font-medium text-gray-700">API Token</label>
+                        <input type="password" name="proxmox_api_token" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="<?= htmlspecialchars($edit_proxmox_server['api_token'] ?? '') ?>">
                     </div>
                     <div class="relative flex items-start">
                         <div class="flex items-center h-5">
-                            <input id="proxmox_verify_ssl" name="proxmox_verify_ssl" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600" <?= !isset($edit_proxmox_server) || ($edit_proxmox_server['verify_ssl'] ?? '1') == 1 ? 'checked' : '' ?>>
+                            <input id="proxmox_verify_ssl" name="proxmox_verify_ssl" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded" <?= !isset($edit_proxmox_server) || ($edit_proxmox_server['verify_ssl'] ?? '1') == 1 ? 'checked' : '' ?>>
                         </div>
                         <div class="ml-3 text-sm">
-                            <label for="proxmox_verify_ssl" class="font-medium text-gray-700 dark:text-gray-300">Verify SSL Certificate</label>
+                            <label for="proxmox_verify_ssl" class="font-medium text-gray-700">Verify SSL Certificate</label>
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
@@ -696,32 +654,32 @@ function renderMonitors(array $monitors, array $history_data) {
                            <?= $edit_proxmox_server ? 'Update Server' : 'Save Server' ?>
                         </button>
                         <?php if ($edit_proxmox_server): ?>
-                            <a href="index.php" class="w-full text-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium dark:bg-gray-600 dark:hover:bg-gray-500 dark:border-gray-500">Cancel</a>
+                            <a href="index.php" class="w-full text-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium">Cancel</a>
                         <?php endif; ?>
                     </div>
                 </form>
 
-                <hr class="my-6 dark:border-gray-700">
+                <hr class="my-6">
                 
-                <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">Configured Servers</h3>
+                <h3 class="text-lg font-medium leading-6 text-gray-900">Configured Servers</h3>
                 <div class="space-y-2 mt-4">
                     <?php if (empty($proxmox_servers)): ?>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">No Proxmox servers configured yet.</p>
+                        <p class="text-sm text-gray-500">No Proxmox servers configured yet.</p>
                     <?php else: foreach ($proxmox_servers as $server): ?>
-                        <div class="p-2 border rounded-md flex justify-between items-center dark:border-gray-700">
+                        <div class="p-2 border rounded-md flex justify-between items-center">
                            <div>
                                 <p class="font-semibold"><?= htmlspecialchars($server['name']) ?></p>
-                                <p class="text-xs text-gray-600 dark:text-gray-400"><?= htmlspecialchars($server['hostname']) ?></p>
+                                <p class="text-xs text-gray-600"><?= htmlspecialchars($server['hostname']) ?></p>
                            </div>
                            <div class="flex items-center space-x-2">
                                 <form method="POST" class="inline">
                                     <input type="hidden" name="proxmox_id" value="<?= $server['id'] ?>">
-                                    <button type="submit" name="sync_proxmox" class="text-sm text-green-600 dark:text-green-400 hover:underline" title="Sync VMs/LXCs">Sync</button>
+                                    <button type="submit" name="sync_proxmox" class="text-sm text-green-600 hover:underline" title="Sync VMs/LXCs">Sync</button>
                                 </form>
-                                <a href="?edit_proxmox=<?= $server['id'] ?>" class="text-sm text-blue-500 dark:text-blue-400 hover:underline">Edit</a>
+                                <a href="?edit_proxmox=<?= $server['id'] ?>" class="text-sm text-blue-500 hover:underline">Edit</a>
                                 <form method="POST" onsubmit="return confirm('Delete this server config? This does NOT delete the monitors.');" class="inline">
                                     <input type="hidden" name="proxmox_id" value="<?= $server['id'] ?>">
-                                    <button type="submit" name="delete_proxmox" class="text-sm text-red-500 dark:text-red-400 hover:underline">Delete</button>
+                                    <button type="submit" name="delete_proxmox" class="text-sm text-red-500 hover:underline">Delete</button>
                                 </form>
                            </div>
                         </div>
@@ -731,46 +689,40 @@ function renderMonitors(array $monitors, array $history_data) {
             </div>
         </div>
     </div>
-    <footer class="mt-12 pt-4 border-t text-center text-sm text-gray-500 dark:border-gray-700">
+    <footer class="mt-12 pt-4 border-t text-center text-sm text-gray-500">
         <p>PHPing - A PHP IP Monitor App</p>
     </footer>
 </div>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // --- Dark Mode Toggle ---
-        var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
-        var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
-
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            themeToggleLightIcon.classList.remove('hidden');
-        } else {
-            themeToggleDarkIcon.classList.remove('hidden');
-        }
-
-        var themeToggleBtn = document.getElementById('theme-toggle');
-
-        themeToggleBtn.addEventListener('click', function() {
-            themeToggleDarkIcon.classList.toggle('hidden');
-            themeToggleLightIcon.classList.toggle('hidden');
-            if (localStorage.getItem('color-theme')) {
-                if (localStorage.getItem('color-theme') === 'light') {
-                    document.documentElement.classList.add('dark');
-                    localStorage.setItem('color-theme', 'dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                    localStorage.setItem('color-theme', 'light');
+    function monitorState() {
+        return {
+            expandedMonitors: [],
+            init() {
+                try {
+                    const stored = localStorage.getItem('expandedMonitors');
+                    this.expandedMonitors = stored ? JSON.parse(stored) : [];
+                } catch (e) {
+                    console.error('Could not parse expanded monitors from localStorage', e);
+                    this.expandedMonitors = [];
+                    localStorage.removeItem('expandedMonitors');
                 }
-            } else {
-                if (document.documentElement.classList.contains('dark')) {
-                    document.documentElement.classList.remove('dark');
-                    localStorage.setItem('color-theme', 'light');
+            },
+            isExpanded(monitorId) {
+                return this.expandedMonitors.includes(monitorId);
+            },
+            toggle(monitorId) {
+                const index = this.expandedMonitors.indexOf(monitorId);
+                if (index === -1) {
+                    this.expandedMonitors.push(monitorId);
                 } else {
-                    document.documentElement.classList.add('dark');
-                    localStorage.setItem('color-theme', 'dark');
+                    this.expandedMonitors.splice(index, 1);
                 }
+                localStorage.setItem('expandedMonitors', JSON.stringify(this.expandedMonitors));
             }
-        });
+        }
+    }
 
+    document.addEventListener('DOMContentLoaded', function () {
         // --- AJAX Auto-Refresh ---
         const updateInterval = 30000; // 30 seconds
         const updateMonitorStatuses = () => {
@@ -821,35 +773,6 @@ function renderMonitors(array $monitors, array $history_data) {
         };
         setInterval(updateMonitorStatuses, updateInterval);
     });
-
-    // --- AlpineJS State ---
-    function monitorState() {
-        return {
-            expandedMonitors: [],
-            init() {
-                try {
-                    const stored = localStorage.getItem('expandedMonitors');
-                    this.expandedMonitors = stored ? JSON.parse(stored) : [];
-                } catch (e) {
-                    console.error('Could not parse expanded monitors from localStorage', e);
-                    this.expandedMonitors = [];
-                    localStorage.removeItem('expandedMonitors');
-                }
-            },
-            isExpanded(monitorId) {
-                return this.expandedMonitors.includes(monitorId);
-            },
-            toggle(monitorId) {
-                const index = this.expandedMonitors.indexOf(monitorId);
-                if (index === -1) {
-                    this.expandedMonitors.push(monitorId);
-                } else {
-                    this.expandedMonitors.splice(index, 1);
-                }
-                localStorage.setItem('expandedMonitors', JSON.stringify(this.expandedMonitors));
-            }
-        }
-    }
 </script>
 </body>
 </html>
