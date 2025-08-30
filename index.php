@@ -271,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $enable_discord = isset($_POST['enable_discord']) ? '1' : '0';
             $webhook_url = $_POST['discord_webhook_url'] ?? '';
-
+            
             $check_interval = $_POST['check_interval_seconds'] ?? '300';
 
             $db->prepare("UPDATE settings SET value = ? WHERE key = 'enable_email'")->execute([$enable_email]);
@@ -448,7 +448,7 @@ function renderMonitors(array $monitors, array $history_data) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en" x-data="pageState()" x-init="init()" :class="{ 'dark': isDarkMode }">
+<html lang="en" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -458,18 +458,19 @@ function renderMonitors(array $monitors, array $history_data) {
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
-        // AlpineJS state for the entire page
+        // Inline script in head to prevent Flash of Unstyled Content (FOUC) for dark mode
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // Combined AlpineJS state for the entire page
         function pageState() {
             return {
                 tab: '<?= $edit_monitor ? 'monitor' : ($edit_proxmox_server ? 'proxmox' : 'monitor') ?>',
-                isDarkMode: false,
                 expandedMonitors: [],
                 init() {
-                    // Initialize Dark Mode
-                    this.isDarkMode = localStorage.getItem('color-theme') === 'dark' || 
-                                     (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                    
-                    // Initialize Expanded Monitors
                     try {
                         const stored = localStorage.getItem('expandedMonitors');
                         this.expandedMonitors = stored ? JSON.parse(stored) : [];
@@ -478,10 +479,6 @@ function renderMonitors(array $monitors, array $history_data) {
                         this.expandedMonitors = [];
                         localStorage.removeItem('expandedMonitors');
                     }
-                },
-                toggleDarkMode() {
-                    this.isDarkMode = !this.isDarkMode;
-                    localStorage.setItem('color-theme', this.isDarkMode ? 'dark' : 'light');
                 },
                 isExpanded(monitorId) {
                     return this.expandedMonitors.includes(monitorId);
@@ -500,15 +497,15 @@ function renderMonitors(array $monitors, array $history_data) {
     </script>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-<div class="container mx-auto p-4 md:p-8">
+<div class="container mx-auto p-4 md:p-8" x-data="pageState()" x-init="init()">
     <header class="mb-8 flex justify-between items-center">
         <div>
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white">PHPing</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-1">A simple status page for your hosts and services.</p>
         </div>
-        <button @click="toggleDarkMode()" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
-            <svg x-show="!isDarkMode" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-            <svg x-show="isDarkMode" x-cloak class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+        <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+            <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
         </button>
     </header>
 
@@ -740,6 +737,40 @@ function renderMonitors(array $monitors, array $history_data) {
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // --- Dark Mode Toggle ---
+        var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+
+        var themeToggleBtn = document.getElementById('theme-toggle');
+
+        themeToggleBtn.addEventListener('click', function() {
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+            if (localStorage.getItem('color-theme')) {
+                if (localStorage.getItem('color-theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                }
+            }
+        });
+
         // --- AJAX Auto-Refresh ---
         const updateInterval = 30000; // 30 seconds
         const updateMonitorStatuses = () => {
@@ -790,6 +821,35 @@ function renderMonitors(array $monitors, array $history_data) {
         };
         setInterval(updateMonitorStatuses, updateInterval);
     });
+
+    // --- AlpineJS State ---
+    function monitorState() {
+        return {
+            expandedMonitors: [],
+            init() {
+                try {
+                    const stored = localStorage.getItem('expandedMonitors');
+                    this.expandedMonitors = stored ? JSON.parse(stored) : [];
+                } catch (e) {
+                    console.error('Could not parse expanded monitors from localStorage', e);
+                    this.expandedMonitors = [];
+                    localStorage.removeItem('expandedMonitors');
+                }
+            },
+            isExpanded(monitorId) {
+                return this.expandedMonitors.includes(monitorId);
+            },
+            toggle(monitorId) {
+                const index = this.expandedMonitors.indexOf(monitorId);
+                if (index === -1) {
+                    this.expandedMonitors.push(monitorId);
+                } else {
+                    this.expandedMonitors.splice(index, 1);
+                }
+                localStorage.setItem('expandedMonitors', JSON.stringify(this.expandedMonitors));
+            }
+        }
+    }
 </script>
 </body>
 </html>
