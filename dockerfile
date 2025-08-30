@@ -2,20 +2,22 @@
 FROM php:8.2-apache
 
 # Install required system dependencies and PHP extensions
+# These are needed for the SQLite database, cURL (for notifications), and Proxmox integration
 RUN apt-get update && apt-get install -y \
     libsqlite3-dev \
     libcurl4-openssl-dev \
     && docker-php-ext-install pdo_sqlite curl
 
-# Copy the entrypoint script and make it executable
-COPY docker-entrypoint.sh /usr/local/bin/
+# Copy the custom entrypoint script into the container
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Make the entrypoint script executable
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set ownership of the web root (good practice)
-RUN chown -R www-data:www-data /var/www/html
-
-# Set the entrypoint to our custom script
+# Set the entrypoint to our custom script.
+# This script will now run every time the container starts.
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# Expose port 80 for the Apache web server
-EXPOSE 80
+# The default command for the php:apache image is to start Apache.
+# We run this from our entrypoint script, so we can just set a default here.
+CMD ["apache2-foreground"]
