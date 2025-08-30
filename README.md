@@ -28,7 +28,7 @@ This is the easiest way to get FamPing running. It uses Docker and Docker Compos
 1.  **Clone the Repository:**
     Clone this repository, which includes the `Dockerfile` and `docker-compose.yml` files, to your machine.
     ```
-    git clone [<your-repository-url>](https://github.com/danmed/FamPing/) famping
+    git clone https://github.com/danmed/FamPing
     cd famping
     ```
 
