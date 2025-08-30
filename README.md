@@ -43,14 +43,14 @@ This method uses Docker and Docker Compose to run the application in an isolated
 2.  **IMPORTANT - Reset Old Environment (If Applicable):**
     If you were using a previous, broken Docker setup, you **must** clean it up first. Run these commands from inside the `famping` folder to remove the old container and the problematic local database file:
     ```bash
-    docker-compose down
+    docker compose down
     sudo rm -f ./monitor.db
     ```
 
 3.  **Build and Run the Container:**
     Use Docker Compose to build the image and start the container in the background.
     ```bash
-    docker-compose up --build -d
+    docker compose up --build -d
     ```
 
 4.  **Run the Setup Script:**
